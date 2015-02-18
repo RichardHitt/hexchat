@@ -49,13 +49,7 @@ int leading_devel = 0;
 #include "../common/util.h"
 #include "../common/hexchatc.h"
 #include "../common/url.h"
-
-#ifdef WIN32
-#include "marshal.h"
-#else
 #include "../common/marshal.h"
-#endif
-
 #include "fe-gtk.h"
 #include "xtext.h"
 #include "fkeys.h"
@@ -1063,7 +1057,7 @@ static textentry *
 gtk_xtext_find_y (GtkXText *xtext, gdouble y, int *subline, int *pixel_offset)
 {
 	xtext_buffer *buf = xtext->buffer;
-	textentry *ent;
+	textentry *ent = NULL;
 	gdouble pixoff = 0, subl = 0;
 
 	if (buf == NULL)
@@ -2037,7 +2031,7 @@ gtk_xtext_motion_notify (GtkWidget * widget, GdkEventMotion * event)
 	int redraw, tmp, x, y, offset, len, line_x;
 	textentry *word_ent;
 	int word_type;
-	gdouble value;
+	gdouble value = 0.0;		// RBH unused unless leading == 1
 
 	gdk_window_get_pointer (widget->window, &x, &y, &mask);
 
@@ -2233,7 +2227,7 @@ gtk_xtext_button_release (GtkWidget * widget, GdkEventButton * event)
 	GtkAdjustment *adj = ADJ;
 	unsigned char *word;
 	int old;
-	gdouble value;
+	gdouble value = 0.0;		// RBH unused unless leading == 1
 
 if (leading)
 {
@@ -2327,7 +2321,7 @@ gtk_xtext_button_press (GtkWidget * widget, GdkEventButton * event)
 	textentry *ent;
 	unsigned char *word;
 	int line_x, x, y, offset, len;
-	gdouble value;
+	gdouble value = 0.0;		// RBH unused unless leading == 1
 
 if (leading)
 {
