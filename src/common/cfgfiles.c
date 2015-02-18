@@ -573,6 +573,8 @@ const struct prefs vars[] =
 	{"text_show_marker", P_OFFINT (hex_text_show_marker), TYPE_BOOL},
 	{"text_show_sep", P_OFFINT (hex_text_show_sep), TYPE_BOOL},
 	{"text_spell_langs", P_OFFSET (hex_text_spell_langs), TYPE_STR},
+	{"text_spacing_line", P_OFFINT (hex_text_spacing_line), TYPE_INT},
+	{"text_spacing_msg", P_OFFINT (hex_text_spacing_msg), TYPE_INT},
 	{"text_stripcolor_msg", P_OFFINT (hex_text_stripcolor_msg), TYPE_BOOL},
 	{"text_stripcolor_replay", P_OFFINT (hex_text_stripcolor_replay), TYPE_BOOL},
 	{"text_stripcolor_topic", P_OFFINT (hex_text_stripcolor_topic), TYPE_BOOL},

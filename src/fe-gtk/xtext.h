@@ -22,6 +22,8 @@
 
 #include <gtk/gtk.h>
 
+/* Temporary int leading TRUE to use newadj else oldadj */
+int leading;
 #define GTK_TYPE_XTEXT              (gtk_xtext_get_type ())
 #define GTK_XTEXT(object)           (G_TYPE_CHECK_INSTANCE_CAST ((object), GTK_TYPE_XTEXT, GtkXText))
 #define GTK_XTEXT_CLASS(klass)      (G_TYPE_CHECK_CLASS_CAST ((klass), GTK_TYPE_XTEXT, GtkXTextClass))
@@ -79,7 +81,12 @@ typedef enum marker_reset_reason_e {
 typedef struct {
 	GtkXText *xtext;					/* attached to this widget */
 
-	gfloat old_value;					/* last known adj->value */
+//#ifdef LEADING
+	gdouble old_value;				/* last known adj->value */
+	gdouble old_lower;				/* last known adj->lower */
+//#else
+	//gfloat old_value;					/* last known adj->value */
+//#endif
 	textentry *text_first;
 	textentry *text_last;
 
@@ -92,6 +99,7 @@ typedef struct {
 
 	int pagetop_line;
 	int pagetop_subline;
+	gdouble pagetop_adj;
 	textentry *pagetop_ent;			/* what's at xtext->adj->value */
 
 	int num_lines;
@@ -118,6 +126,9 @@ typedef struct {
 	offsets_t curdata;		/* current offset info, from *curmark */
 	GRegex *search_re;		/* Compiled regular expression */
 	textentry *hintsearch;	/* textentry found for last search */
+/* only for leading development -- */
+	int last_line_leading;
+	int last_para_leading;
 } xtext_buffer;
 
 struct _GtkXText
@@ -128,7 +139,10 @@ struct _GtkXText
 	xtext_buffer *orig_buffer;
 	xtext_buffer *selection_buffer;
 
-	GtkAdjustment *adj;
+/* If int leading is TRUE choose newadj else oldadj */
+/*	GtkAdjustment *adj;			---   obslete */
+	GtkAdjustment *oldadj;
+	GtkAdjustment *newadj;
 	GdkPixmap *pixmap;				/* 0 = use palette[19] */
 	GdkDrawable *draw_buf;			/* points to ->window */
 	GdkCursor *hand_cursor;
@@ -155,8 +169,10 @@ struct _GtkXText
 	gulong vc_signal_tag;        /* signal handler for "value_changed" adj */
 
 	int select_start_adj;		  /* the adj->value when the selection started */
+	gdouble select_start_adjust;
 	int select_start_x;
 	int select_start_y;
+	gdouble select_end_adjust;
 	int select_end_x;
 	int select_end_y;
 

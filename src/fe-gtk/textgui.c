@@ -203,7 +203,10 @@ pevent_edited (GtkCellRendererText *render, gchar *pathstr, gchar *new_text, gpo
 	g_free (out);
 
 	/* Scroll to bottom */
-	gtk_adjustment_set_value (xtext->adj, gtk_adjustment_get_upper (xtext->adj));
+if (leading)
+	gtk_adjustment_set_value (xtext->newadj, gtk_adjustment_get_upper (xtext->newadj));
+else
+	gtk_adjustment_set_value (xtext->oldadj, gtk_adjustment_get_upper (xtext->oldadj));
 
 	/* save this when we exit */
 	prefs.save_pevents = 1;

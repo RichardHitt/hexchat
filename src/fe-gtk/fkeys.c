@@ -16,6 +16,7 @@
  * Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301, USA
  */
 
+#define LEADING
 #include <stdio.h>
 #include <stdlib.h>
 #include <sys/types.h>
@@ -1240,7 +1241,11 @@ static int
 key_action_scroll_page (GtkWidget * wid, GdkEventKey * evt, char *d1,
 								char *d2, struct session *sess)
 {
+#ifdef LEADING
+	gdouble value, start, end;
+#else
 	int value, end;
+#endif
 	GtkAdjustment *adj;
 	enum scroll_type { PAGE_TOP, PAGE_BOTTOM, PAGE_UP, PAGE_DOWN, LINE_UP, LINE_DOWN };
 	int type = PAGE_DOWN;
@@ -1265,12 +1270,21 @@ key_action_scroll_page (GtkWidget * wid, GdkEventKey * evt, char *d1,
 		return 0;
 
 	adj = gtk_range_get_adjustment (GTK_RANGE (sess->gui->vscrollbar));
+#ifdef LEADING
+	start = gtk_adjustment_get_lower (adj);
+	end = gtk_adjustment_get_upper (adj) - gtk_adjustment_get_page_size (adj);
+#else
 	end = gtk_adjustment_get_upper (adj) - gtk_adjustment_get_lower (adj) - gtk_adjustment_get_page_size (adj);
+#endif
 
 	switch (type)
 	{
 	case PAGE_TOP:
-		value = 0;
+#ifdef LEADING
+		value = start;
+#else
+		value = 0.0;
+#endif
 		break;
 
 	case PAGE_BOTTOM:
@@ -1286,11 +1300,13 @@ key_action_scroll_page (GtkWidget * wid, GdkEventKey * evt, char *d1,
 		break;
 
 	case LINE_UP:
-		value = gtk_adjustment_get_value (adj) - 1.0;
+		//value = gtk_adjustment_get_step_increment (adj) - 1.0;
+		value = gtk_adjustment_get_value (adj) - gtk_adjustment_get_step_increment (adj);
 		break;
 
 	case LINE_DOWN:
-		value = gtk_adjustment_get_value (adj) + 1.0;
+		//value = gtk_adjustment_get_value (adj) + 1.0;
+		value = gtk_adjustment_get_value (adj) + gtk_adjustment_get_step_increment (adj);
 		break;
 	}
 
