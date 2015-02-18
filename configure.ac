@@ -18,6 +18,7 @@ AM_MAINTAINER_MODE
 AC_PROG_CC
 AM_PROG_CC_C_O
 AC_PROG_CPP
+AC_PROG_OBJC
 AM_PROG_AS
 AM_PROG_AR
 AM_DISABLE_STATIC
@@ -597,6 +598,7 @@ AM_CONDITIONAL(DO_SYSINFO, test "x$sysinfo" = "xyes")
 AM_CONDITIONAL(DO_STATIC_ANALYSIS, test "x$analyze" = "xyes")
 AM_CONDITIONAL(USE_DBUS, test "x$dbus" = "xyes")
 AM_CONDITIONAL(HAVE_ISO_CODES, test "x$isocodes" = "xyes")
+AM_CONDITIONAL(HAVE_GTK_MAC, test "x$_gdk_tgt" = xquartz)
 AM_CONDITIONAL(WITH_TM, test "x$theme_manager" != "xno")
 
 dnl *********************************************************************

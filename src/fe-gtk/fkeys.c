@@ -199,6 +199,7 @@ static const struct key_action key_actions[KEY_MAX_ACTIONS + 1] = {
 	"ACCEL=Down\nNext Command\nD1!\nD2!\n\n"\
 	"ACCEL=Up\nLast Command\nD1!\nD2!\n\n"\
 	"ACCEL=Tab\nComplete nick/command\nD1!\nD2!\n\n"\
+	"ACCEL=<Shift>ISO_Left_Tab\nComplete nick/command\nD1:Previous\nD2!\n\n"\
 	"ACCEL=space\nCheck For Replace\nD1!\nD2!\n\n"\
 	"ACCEL=Return\nCheck For Replace\nD1!\nD2!\n\n"\
 	"ACCEL=KP_Enter\nCheck For Replace\nD1!\nD2!\n\n"\
@@ -322,7 +323,7 @@ key_handle_key_press (GtkWidget *wid, GdkEventKey *evt, session *sess)
 		return FALSE;
 	current_sess = sess;
 
-	if (plugin_emit_keypress (sess, evt->state, evt->keyval, evt->length, evt->string))
+	if (plugin_emit_keypress (sess, evt->state, evt->keyval, gdk_keyval_to_unicode (evt->keyval)))
 		return 1;
 
 	/* maybe the plugin closed this tab? */
@@ -666,6 +667,7 @@ key_dialog_treeview_new (GtkWidget *box)
 	view = gtk_tree_view_new_with_model (GTK_TREE_MODEL (store));
 	gtk_tree_view_set_fixed_height_mode (GTK_TREE_VIEW (view), TRUE);
 	gtk_tree_view_set_enable_search (GTK_TREE_VIEW (view), FALSE);
+	gtk_tree_view_set_reorderable (GTK_TREE_VIEW (view), TRUE);
 
 	g_signal_connect (G_OBJECT (view), "key-press-event",
 					G_CALLBACK (key_dialog_keypress), NULL);

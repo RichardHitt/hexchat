@@ -80,7 +80,7 @@ __SSL_critical_error (char *funcname)
 /* +++++ SSL functions +++++ */
 
 SSL_CTX *
-_SSL_context_init (void (*info_cb_func), int server)
+_SSL_context_init (void (*info_cb_func))
 {
 	SSL_CTX *ctx;
 #ifdef WIN32
@@ -89,7 +89,7 @@ _SSL_context_init (void (*info_cb_func), int server)
 
 	SSLeay_add_ssl_algorithms ();
 	SSL_load_error_strings ();
-	ctx = SSL_CTX_new (server ? SSLv23_server_method() : SSLv23_client_method ());
+	ctx = SSL_CTX_new (SSLv23_client_method ());
 
 	SSL_CTX_set_session_cache_mode (ctx, SSL_SESS_CACHE_BOTH);
 	SSL_CTX_set_timeout (ctx, 300);
@@ -99,21 +99,12 @@ _SSL_context_init (void (*info_cb_func), int server)
 							  |SSL_OP_NO_TICKET
 							  |SSL_OP_CIPHER_SERVER_PREFERENCE);
 
-#if OPENSSL_VERSION_NUMBER >= 0x00908000L /* workaround for OpenSSL 0.9.8 */
+#if OPENSSL_VERSION_NUMBER >= 0x00908000L && !defined (OPENSSL_NO_COMP) /* workaround for OpenSSL 0.9.8 */
 	sk_SSL_COMP_zero(SSL_COMP_get_compression_methods());
 #endif
 
 	/* used in SSL_connect(), SSL_accept() */
 	SSL_CTX_set_info_callback (ctx, info_cb_func);
-
-#ifdef WIN32
-	/* under win32, OpenSSL needs to be seeded with some randomness */
-	for (i = 0; i < 128; i++)
-	{
-		r = rand ();
-		RAND_seed ((unsigned char *)&r, sizeof (r));
-	}
-#endif
 
 	return(ctx);
 }
@@ -483,7 +474,7 @@ _SSL_check_subject_altname (X509 *cert, const char *host)
 
 	if (addr != NULL)
 		g_object_unref (addr);
-	sk_GENERAL_NAME_free (altname_stack);
+	sk_GENERAL_NAME_pop_free (altname_stack, GENERAL_NAME_free);
 	return rv;
 }
 

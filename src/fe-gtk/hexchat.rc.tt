@@ -1,9 +1,9 @@
 #include <winver.h>
-#include "../../config.h"
+#include "config.h"
 
 #define COMMA_VERSION <#= [string]::Join(',', $versionParts) #>,0
 
-XC_ICON ICON "../../data/icons/hexchat.ico"
+XC_ICON ICON "<#= $env:SOLUTIONDIR -replace '\\', '/' #>data/icons/hexchat.ico"
 
 VS_VERSION_INFO VERSIONINFO
 	FILEVERSION    COMMA_VERSION
@@ -15,6 +15,7 @@ VS_VERSION_INFO VERSIONINFO
 			BEGIN
 				
 				VALUE "FileDescription", "HexChat IRC Client"
+				VALUE "CompanyName", "HexChat"
 				VALUE "ProductName", "HexChat"
 				VALUE "ProductVersion", PACKAGE_VERSION
 				VALUE "FileVersion", PACKAGE_VERSION

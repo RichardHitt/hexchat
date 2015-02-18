@@ -49,7 +49,13 @@ int leading_devel = 0;
 #include "../common/util.h"
 #include "../common/hexchatc.h"
 #include "../common/url.h"
+
+#ifdef WIN32
+#include "marshal.h"
+#else
 #include "../common/marshal.h"
+#endif
+
 #include "fe-gtk.h"
 #include "xtext.h"
 #include "fkeys.h"

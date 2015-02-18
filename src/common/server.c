@@ -86,57 +86,21 @@ extern pxProxyFactory *libproxy_factory;
    send via SSL. server/dcc both use this function. */
 
 int
-tcp_send_real (void *ssl, int sok, char *encoding, int using_irc, char *buf, int len)
+tcp_send_real (void *ssl, int sok, GIConv write_converter, char *buf, int len)
 {
 	int ret;
-	char *locale;
-	gsize loc_len;
 
-	if (encoding == NULL)	/* system */
-	{
-		locale = NULL;
-		if (!prefs.utf8_locale)
-		{
-			const gchar *charset;
-
-			g_get_charset (&charset);
-			locale = g_convert_with_fallback (buf, len, charset, "UTF-8",
-														 "?", 0, &loc_len, 0);
-		}
-	} else
-	{
-		if (using_irc)	/* using "IRC" encoding (CP1252/UTF-8 hybrid) */
-			/* if all chars fit inside CP1252, use that. Otherwise this
-			   returns NULL and we send UTF-8. */
-			locale = g_convert (buf, len, "CP1252", "UTF-8", 0, &loc_len, 0);
-		else
-			locale = g_convert_with_fallback (buf, len, encoding, "UTF-8",
-														 "?", 0, &loc_len, 0);
-	}
-
-	if (locale)
-	{
-		len = loc_len;
+	gsize buf_encoded_len;
+	gchar *buf_encoded = text_convert_invalid (buf, len, write_converter, "?", &buf_encoded_len);
 #ifdef USE_OPENSSL
-		if (!ssl)
-			ret = send (sok, locale, len, 0);
-		else
-			ret = _SSL_send (ssl, locale, len);
+	if (!ssl)
+		ret = send (sok, buf_encoded, buf_encoded_len, 0);
+	else
+		ret = _SSL_send (ssl, buf_encoded, buf_encoded_len);
 #else
-		ret = send (sok, locale, len, 0);
+	ret = send (sok, buf_encoded, buf_encoded_len, 0);
 #endif
-		g_free (locale);
-	} else
-	{
-#ifdef USE_OPENSSL
-		if (!ssl)
-			ret = send (sok, buf, len, 0);
-		else
-			ret = _SSL_send (ssl, buf, len);
-#else
-		ret = send (sok, buf, len, 0);
-#endif
-	}
+	g_free (buf_encoded);
 
 	return ret;
 }
@@ -148,8 +112,7 @@ server_send_real (server *serv, char *buf, int len)
 
 	url_check_line (buf);
 
-	return tcp_send_real (serv->ssl, serv->sok, serv->encoding, serv->using_irc,
-								 buf, len);
+	return tcp_send_real (serv->ssl, serv->sok, serv->write_converter, buf, len);
 }
 
 /* new throttling system, uses the same method as the Undernet
@@ -255,12 +218,6 @@ tcp_send_len (server *serv, char *buf, int len)
 	return 1;
 }
 
-/*int
-tcp_send (server *serv, char *buf)
-{
-	return tcp_send_len (serv, buf, strlen (buf));
-}*/
-
 void
 tcp_sendf (server *serv, const char *fmt, ...)
 {
@@ -300,100 +257,15 @@ close_socket (int sok)
 static void
 server_inline (server *serv, char *line, gssize len)
 {
-	char *utf_line_allocated = NULL;
+	gsize len_utf8;
+	line = text_convert_invalid (line, len, serv->read_converter, unicode_fallback_string, &len_utf8);
 
-	/* Checks whether we're set to use UTF-8 charset */
-	if (serv->using_irc ||				/* 1. using CP1252/UTF-8 Hybrid */
-		(serv->encoding == NULL && prefs.utf8_locale) || /* OR 2. using system default->UTF-8 */
-	    (serv->encoding != NULL &&				/* OR 3. explicitly set to UTF-8 */
-		 (g_ascii_strcasecmp (serv->encoding, "UTF8") == 0 ||
-		  g_ascii_strcasecmp (serv->encoding, "UTF-8") == 0)))
-	{
-		/* The user has the UTF-8 charset set, either via /charset
-		command or from his UTF-8 locale. Thus, we first try the
-		UTF-8 charset, and if we fail to convert, we assume
-		it to be ISO-8859-1 (see text_validate). */
-
-		utf_line_allocated = text_validate (&line, &len);
-	}
-	else
-	{
-		/* Since the user has an explicit charset set, either
-		via /charset command or from his non-UTF8 locale,
-		we don't fallback to ISO-8859-1 and instead try to remove
-		errnoeous octets till the string is convertable in the
-		said charset. */
-
-		const char *encoding = NULL;
-
-		if (serv->encoding != NULL)
-			encoding = serv->encoding;
-		else
-			g_get_charset (&encoding);
-
-		if (encoding != NULL)
-		{
-			char *conv_line; /* holds a copy of the original string */
-			gsize conv_len; /* tells g_convert how much of line to convert */
-			gsize utf_len;
-			gsize read_len;
-			GError *err;
-			gboolean retry;
-
-			conv_line = g_malloc (len + 1);
-			memcpy (conv_line, line, len);
-			conv_line[len] = 0;
-			conv_len = len;
-
-			/* if CP1255, convert it with the NUL terminator.
-				Works around SF bug #1122089 */
-			if (serv->using_cp1255)
-				conv_len++;
-
-			do
-			{
-				err = NULL;
-				retry = FALSE;
-				utf_line_allocated = g_convert_with_fallback (conv_line, conv_len, "UTF-8", encoding, "?", &read_len, &utf_len, &err);
-				if (err != NULL)
-				{
-					if (err->code == G_CONVERT_ERROR_ILLEGAL_SEQUENCE && conv_len > (read_len + 1))
-					{
-						/* Make our best bet by removing the erroneous char.
-						   This will work for casual 8-bit strings with non-standard chars. */
-						memmove (conv_line + read_len, conv_line + read_len + 1, conv_len - read_len -1);
-						conv_len--;
-						retry = TRUE;
-					}
-					g_error_free (err);
-				}
-			} while (retry);
-
-			g_free (conv_line);
-
-			/* If any conversion has occured at all. Conversion might fail
-			due to errors other than invalid sequences, e.g. unknown charset. */
-			if (utf_line_allocated != NULL)
-			{
-				line = utf_line_allocated;
-				len = utf_len;
-				if (serv->using_cp1255 && len > 0)
-					len--;
-			}
-			else
-			{
-				/* If all fails, treat as UTF-8 with fallback to ISO-8859-1. */
-				utf_line_allocated = text_validate (&line, &len);
-			}
-		}
-	}
-
-	fe_add_rawlog (serv, line, len, FALSE);
+	fe_add_rawlog (serv, line, len_utf8, FALSE);
 
 	/* let proto-irc.c handle it */
-	serv->p_inline (serv, line, len);
+	serv->p_inline (serv, line, len_utf8);
 
-	g_free (utf_line_allocated);
+	g_free (line);
 }
 
 /* read data from socket */
@@ -1629,7 +1501,7 @@ server_connect (server *serv, char *hostname, int port, int no_login)
 #ifdef USE_OPENSSL
 	if (!serv->ctx && serv->use_ssl)
 	{
-		if (!(serv->ctx = _SSL_context_init (ssl_cb_info, FALSE)))
+		if (!(serv->ctx = _SSL_context_init (ssl_cb_info)))
 		{
 			fprintf (stderr, "_SSL_context_init failed\n");
 			exit (1);
@@ -1768,14 +1640,7 @@ server_set_encoding (server *serv, char *new_encoding)
 {
 	char *space;
 
-	if (serv->encoding)
-	{
-		g_free (serv->encoding);
-		/* can be left as NULL to indicate system encoding */
-		serv->encoding = NULL;
-		serv->using_cp1255 = FALSE;
-		serv->using_irc = FALSE;
-	}
+	g_free (serv->encoding);
 
 	if (new_encoding)
 	{
@@ -1786,13 +1651,35 @@ server_set_encoding (server *serv, char *new_encoding)
 		if (space)
 			space[0] = 0;
 
-		/* server_inline() uses these flags */
-		if (!g_ascii_strcasecmp (serv->encoding, "CP1255") ||
-			 !g_ascii_strcasecmp (serv->encoding, "WINDOWS-1255"))
-			serv->using_cp1255 = TRUE;
-		else if (!g_ascii_strcasecmp (serv->encoding, "IRC"))
-			serv->using_irc = TRUE;
+		/* Default legacy "IRC" encoding to utf-8. */
+		if (g_ascii_strcasecmp (serv->encoding, "IRC") == 0)
+		{
+			g_free (serv->encoding);
+			serv->encoding = g_strdup ("UTF-8");
+		}
+
+		else if (!servlist_check_encoding (serv->encoding))
+		{
+			g_free (serv->encoding);
+			serv->encoding = g_strdup ("UTF-8");
+		}
 	}
+	else
+	{
+		serv->encoding = g_strdup ("UTF-8");
+	}
+
+	if (serv->read_converter != NULL)
+	{
+		g_iconv_close (serv->read_converter);
+	}
+	serv->read_converter = g_iconv_open ("UTF-8", serv->encoding);
+
+	if (serv->write_converter != NULL)
+	{
+		g_iconv_close (serv->write_converter);
+	}
+	serv->write_converter = g_iconv_open (serv->encoding, "UTF-8");
 }
 
 server *
@@ -1836,6 +1723,8 @@ server_set_defaults (server *serv)
 	serv->chanmodes = g_strdup ("beI,k,l");
 	serv->nick_prefixes = g_strdup ("@%+");
 	serv->nick_modes = g_strdup ("ohv");
+
+	server_set_encoding (serv, "UTF-8");
 
 	serv->nickcount = 1;
 	serv->end_of_motd = FALSE;
@@ -1986,6 +1875,10 @@ server_free (server *serv)
 	g_free (serv->bad_nick_prefixes);
 	g_free (serv->last_away_reason);
 	g_free (serv->encoding);
+
+	g_iconv_close (serv->read_converter);
+	g_iconv_close (serv->write_converter);
+
 	if (serv->favlist)
 		g_slist_free_full (serv->favlist, (GDestroyNotify) servlist_favchan_free);
 #ifdef USE_OPENSSL

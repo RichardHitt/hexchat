@@ -163,6 +163,7 @@ struct _hexchat_plugin
 };
 #endif
 
+GModule *module_load (char *filename);
 char *plugin_load (session *sess, char *filename, char *arg);
 int plugin_reload (session *sess, char *name, int by_filename);
 void plugin_add (session *sess, char *filename, void *handle, void *init_func, void *deinit_func, char *arg, int fake);
@@ -174,7 +175,7 @@ int plugin_emit_server (session *sess, char *name, char *word[], char *word_eol[
 						time_t server_time);
 int plugin_emit_print (session *sess, char *word[], time_t server_time);
 int plugin_emit_dummy_print (session *sess, char *name);
-int plugin_emit_keypress (session *sess, unsigned int state, unsigned int keyval, int len, char *string);
+int plugin_emit_keypress (session *sess, unsigned int state, unsigned int keyval, gunichar key);
 GList* plugin_command_list(GList *tmp_list);
 int plugin_show_help (session *sess, char *cmd);
 void plugin_command_foreach (session *sess, void *userdata, void (*cb) (session *sess, void *userdata, char *name, char *usage));

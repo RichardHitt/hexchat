@@ -3511,7 +3511,6 @@ mg_changui_new (session *sess, restore_gui *res, int tab, int focus)
 {
 	int first_run = FALSE;
 	session_gui *gui;
-	struct User *user = NULL;
 
 	if (res == NULL)
 	{
@@ -3525,9 +3524,6 @@ mg_changui_new (session *sess, restore_gui *res, int tab, int focus)
 		sess->server->front_session = sess;
 	}
 
-	if (!is_channel (sess->server, sess->channel))
-		user = userlist_find_global (sess->server, sess->channel);
-
 	if (!tab)
 	{
 		gui = g_new0 (session_gui, 1);
@@ -3535,8 +3531,6 @@ mg_changui_new (session *sess, restore_gui *res, int tab, int focus)
 		sess->gui = gui;
 		mg_create_topwindow (sess);
 		fe_set_title (sess);
-		if (user && user->hostname)
-			set_topic (sess, user->hostname, user->hostname);
 		return;
 	}
 
@@ -3555,9 +3549,6 @@ mg_changui_new (session *sess, restore_gui *res, int tab, int focus)
 		sess->gui = gui = mg_gui;
 		gui->is_tab = TRUE;
 	}
-
-	if (user && user->hostname)
-		set_topic (sess, user->hostname, user->hostname);
 
 	mg_add_chan (sess);
 

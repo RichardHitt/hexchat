@@ -41,6 +41,7 @@
 #include "chanopt.h"
 #include "ignore.h"
 #include "hexchat-plugin.h"
+#include "inbound.h"
 #include "plugin.h"
 #include "plugin-identd.h"
 #include "plugin-timer.h"
@@ -491,7 +492,6 @@ new_ircwindow (server *serv, char *name, int type, int focus)
 		break;
 	case SESS_DIALOG:
 		sess = session_new (serv, name, type, focus);
-		log_open_or_close (sess);
 		break;
 	default:
 /*	case SESS_CHANNEL:
@@ -506,6 +506,16 @@ new_ircwindow (server *serv, char *name, int type, int focus)
 	scrollback_load (sess);
 	if (sess->scrollwritten && sess->scrollback_replay_marklast)
 		sess->scrollback_replay_marklast (sess);
+	if (type == SESS_DIALOG)
+	{
+		struct User *user;
+
+		log_open_or_close (sess);
+
+		user = userlist_find_global (serv, name);
+		if (user && user->hostname)
+			set_topic (sess, user->hostname, user->hostname);
+	}
 	plugin_emit_dummy_print (sess, "Open Context");
 
 	return sess;
@@ -757,7 +767,6 @@ static void
 xchat_init (void)
 {
 	char buf[3068];
-	const char *cs = NULL;
 
 #ifdef WIN32
 	WSADATA wsadata;
@@ -794,9 +803,6 @@ xchat_init (void)
 	signal (SIGPIPE, SIG_IGN);
 #endif
 #endif
-
-	if (g_get_charset (&cs))
-		prefs.utf8_locale = TRUE;
 
 	load_text_events ();
 	sound_load ();
@@ -990,6 +996,10 @@ main (int argc, char *argv[])
 	int i;
 	int ret;
 
+#ifdef WIN32
+	HRESULT coinit_result;
+#endif
+
 	srand ((unsigned int) time (NULL)); /* CL: do this only once! */
 
 	/* We must check for the config dir parameter, otherwise load_config() will behave incorrectly.
@@ -1052,6 +1062,14 @@ main (int argc, char *argv[])
 	libproxy_factory = px_proxy_factory_new();
 #endif
 
+#ifdef WIN32
+	coinit_result = CoInitializeEx (NULL, COINIT_APARTMENTTHREADED);
+	if (SUCCEEDED (coinit_result))
+	{
+		CoInitializeSecurity (NULL, -1, NULL, NULL, RPC_C_AUTHN_LEVEL_DEFAULT, RPC_C_IMP_LEVEL_IMPERSONATE, NULL, EOAC_NONE, NULL);
+	}
+#endif
+
 	fe_init ();
 
 	/* This is done here because cfgfiles.c is too early in
@@ -1078,6 +1096,13 @@ main (int argc, char *argv[])
 	xchat_init ();
 
 	fe_main ();
+
+#ifdef WIN32
+	if (SUCCEEDED (coinit_result))
+	{
+		CoUninitialize ();
+	}
+#endif
 
 #ifdef USE_LIBPROXY
 	px_proxy_factory_free(libproxy_factory);

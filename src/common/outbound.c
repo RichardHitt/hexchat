@@ -590,7 +590,6 @@ static int
 cmd_charset (struct session *sess, char *tbuf, char *word[], char *word_eol[])
 {
 	server *serv = sess->server;
-	const char *locale = NULL;
 	int offset = 0;
 
 	if (strcmp (word[2], "-quiet") == 0)
@@ -598,9 +597,7 @@ cmd_charset (struct session *sess, char *tbuf, char *word[], char *word_eol[])
 
 	if (!word[2 + offset][0])
 	{
-		g_get_charset (&locale);
-		PrintTextf (sess, "Current charset: %s\n",
-						serv->encoding ? serv->encoding : locale);
+		PrintTextf (sess, "Current charset: %s\n", serv->encoding);
 		return TRUE;
 	}
 
@@ -3473,12 +3470,6 @@ cmd_topic (struct session *sess, char *tbuf, char *word[], char *word_eol[])
 static int
 cmd_tray (struct session *sess, char *tbuf, char *word[], char *word_eol[])
 {
-	if (strcmp (word[2], "-b") == 0)
-	{
-		fe_tray_set_balloon (word[3], word[4][0] ? word[4] : NULL);
-		return TRUE;
-	}
-
 	if (strcmp (word[2], "-t") == 0)
 	{
 		fe_tray_set_tooltip (word[3][0] ? word[3] : NULL);
@@ -4749,13 +4740,13 @@ handle_command (session *sess, char *cmd, int check_spch)
 	}
 	else
 	{
-		/* unknown command, just send it to the server and hope */
 		if (!sess->server->connected)
 		{
-			PrintText (sess, _("Unknown Command. Try /help\n"));
+			PrintTextf (sess, _("Unknown Command %s. Try /help\n"), word[1]);
 		}
 		else
 		{
+			/* unknown command, just send it to the server and hope */
 			sess->server->p_raw (sess->server, cmd);
 		}
 	}

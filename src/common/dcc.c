@@ -487,8 +487,7 @@ dcc_write_chat (char *nick, char *text)
 	if (dcc && dcc->dccstat == STAT_ACTIVE)
 	{
 		len = strlen (text);
-		tcp_send_real (NULL, dcc->sok, dcc->serv->encoding, dcc->serv->using_irc,
-							text, len);
+		tcp_send_real (NULL, dcc->sok, dcc->serv->write_converter, text, len);
 		send (dcc->sok, "\n", 1, 0);
 		dcc->size += len;
 		fe_dcc_update (dcc);
@@ -506,36 +505,11 @@ dcc_chat_line (struct DCC *dcc, char *line)
 	session *sess;
 	char *word[PDIWORDS];
 	char *po;
-	char *utf;
-	char *conv;
 	int ret, i;
-	gssize len;
-	gsize utf_len;
 	char portbuf[32];
 	message_tags_data no_tags = MESSAGE_TAGS_DATA_INIT;
 
-	len = strlen (line);
-	if (dcc->serv->using_cp1255)
-		len++;	/* include the NUL terminator */
-
-	if (dcc->serv->using_irc) /* using "IRC" encoding (CP1252/UTF-8 hybrid) */
-		utf = NULL;
-	else if (dcc->serv->encoding == NULL)     /* system */
-		utf = g_locale_to_utf8 (line, len, NULL, &utf_len, NULL);
-	else
-		utf = g_convert (line, len, "UTF-8", dcc->serv->encoding, 0, &utf_len, 0);
-
-	if (utf)
-	{
-		line = utf;
-		len = utf_len;
-	}
-
-	if (dcc->serv->using_cp1255 && len > 0)
-		len--;
-
-	/* we really need valid UTF-8 now */
-	conv = text_validate (&line, &len);
+	line = text_convert_invalid (line, -1, dcc->serv->read_converter, unicode_fallback_string, NULL);
 
 	sess = find_dialog (dcc->serv, dcc->nick);
 	if (!sess)
@@ -556,16 +530,14 @@ dcc_chat_line (struct DCC *dcc, char *line)
 	/* did the plugin close it? */
 	if (!g_slist_find (dcc_list, dcc))
 	{
-		g_free (utf);
-		g_free (conv);
+		g_free (line);
 		return 1;
 	}
 
 	/* did the plugin eat the event? */
 	if (ret)
 	{
-		g_free (utf);
-		g_free (conv);
+		g_free (line);
 		return 0;
 	}
 
@@ -582,8 +554,7 @@ dcc_chat_line (struct DCC *dcc, char *line)
 	{
 		inbound_privmsg (dcc->serv, dcc->nick, "", line, FALSE, &no_tags);
 	}
-	g_free (utf);
-	g_free (conv);
+	g_free (line);
 	return 0;
 }
 

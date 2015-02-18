@@ -265,7 +265,6 @@ struct hexchatprefs
 	int hex_gui_win_top;
 	int hex_gui_win_width;
 	int hex_identd_port;
-	int hex_input_balloon_time;
 	int hex_irc_ban_type;
 	int hex_irc_join_delay;
 	int hex_irc_notice_pos;
@@ -319,7 +318,6 @@ struct hexchatprefs
 	guint32 dcc_ip;
 
 	unsigned int wait_on_exit;	/* wait for logs to be flushed to disk IF we're connected */
-	unsigned int utf8_locale;
 
 	/* Tells us if we need to save, only when they've been edited.
 		This is so that we continue using internal defaults (which can
@@ -536,7 +534,10 @@ typedef struct server
 	time_t ping_recv;					/* when we last got a ping reply */
 	time_t away_time;					/* when we were marked away */
 
-	char *encoding;					/* NULL for system */
+	char *encoding;
+	GIConv read_converter;  /* iconv converter for converting from server encoding to UTF-8. */
+	GIConv write_converter; /* iconv converter for converting from UTF-8 to server encoding. */
+
 	GSList *favlist;			/* list of channels & keys to join */
 
 	unsigned int motd_skipped:1;
@@ -569,8 +570,6 @@ typedef struct server
 	unsigned int have_except:1;	/* ban exemptions +e */
 	unsigned int have_invite:1;	/* invite exemptions +I */
 	unsigned int have_cert:1;	/* have loaded a cert */
-	unsigned int using_cp1255:1;	/* encoding is CP1255/WINDOWS-1255? */
-	unsigned int using_irc:1;		/* encoding is "IRC" (CP1252/UTF-8 hybrid)? */
 	unsigned int use_who:1;			/* whether to use WHO command to get dcc_ip */
 	unsigned int sasl_mech;			/* mechanism for sasl auth */
 	unsigned int sent_saslauth:1;	/* have sent AUTHENICATE yet */

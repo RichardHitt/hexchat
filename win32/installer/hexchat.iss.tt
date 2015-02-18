@@ -148,6 +148,8 @@ Source: "pixman-1.dll"; DestDir: "{app}"; Flags: ignoreversion; Components: libs
 Source: "ssleay32.dll"; DestDir: "{app}"; Flags: ignoreversion; Components: libs
 Source: "zlib1.dll"; DestDir: "{app}"; Flags: ignoreversion; Components: libs
 
+Source: "plugins\hcnotifications-winrt.dll"; DestDir: "{app}\plugins"; Flags: ignoreversion; Components: libs
+
 Source: "lib\enchant\libenchant_myspell.dll"; DestDir: "{app}\lib\enchant"; Flags: ignoreversion; Components: libs
 
 Source: "lib\gtk-2.0\i686-pc-vs10\engines\*"; DestDir: "{app}\lib\gtk-2.0\i686-pc-vs10\engines"; Flags: ignoreversion; Components: libs
@@ -160,6 +162,7 @@ Source: "share\music.png"; DestDir: "{app}\share"; Flags: ignoreversion; Compone
 Source: "plugins\hcmpcinfo.dll"; DestDir: "{app}\plugins"; Flags: ignoreversion; Components: plugins\mpcinfo
 Source: "share\download.png"; DestDir: "{app}\share"; Flags: ignoreversion; Components: plugins\upd
 Source: "plugins\hcupd.dll"; DestDir: "{app}\plugins"; Flags: ignoreversion; Components: plugins\upd
+Source: "WinSparkle.dll"; DestDir: "{app}"; Flags: ignoreversion; Components: plugins\upd
 Source: "plugins\hcwinamp.dll"; DestDir: "{app}\plugins"; Flags: ignoreversion; Components: plugins\winamp
 Source: "share\system.png"; DestDir: "{app}\share"; Flags: ignoreversion; Components: plugins\sysinfo
 Source: "plugins\hcsysinfo.dll"; DestDir: "{app}\plugins"; Flags: ignoreversion; Components: plugins\sysinfo
@@ -173,7 +176,7 @@ Source: "hexchat-text.exe"; DestDir: "{app}"; Flags: ignoreversion; Components: 
 Source: "thememan.exe"; DestDir: "{app}"; Flags: ignoreversion; Components: xtm
 
 [Icons]
-Name: "{group}\HexChat"; Filename: "{app}\hexchat.exe"; Tasks: not portable
+Name: "{group}\HexChat"; Filename: "{app}\hexchat.exe"; AppUserModelID: "HexChat.Desktop.Notify"; Tasks: not portable
 Name: "{group}\HexChat Safe Mode"; Filename: "{app}\hexchat.exe"; Parameters: "--no-auto --no-plugins"; Tasks: not portable
 Name: "{group}\HexChat ChangeLog"; Filename: "{app}\changelog.url"; IconFilename: "{sys}\shell32.dll"; IconIndex: 165; Tasks: not portable
 Name: "{group}\HexChat ReadMe"; Filename: "{app}\readme.url"; IconFilename: "{sys}\shell32.dll"; IconIndex: 23; Tasks: not portable
@@ -257,18 +260,18 @@ begin
 	begin
 
 #if APPARCH == "x64"
-		REDIST := 'http://dl.hexchat.net/misc/vcredist_2013_x64.exe';
-		PERL := 'http://dl.hexchat.net/misc/perl/Perl%205.20.0%20x64.msi';
+		REDIST := 'https://dl.hexchat.net/misc/vcredist_2013_x64.exe';
+		PERL := 'https://dl.hexchat.net/misc/perl/Perl%205.20.0%20x64.msi';
 		PY2 := 'http://python.org/ftp/python/2.7.8/python-2.7.8.amd64.msi';
 		PY3 := 'http://python.org/ftp/python/3.4.1/python-3.4.1.amd64.msi';
 #else
-		REDIST := 'http://dl.hexchat.net/misc/vcredist_2013_x86.exe';
-		PERL := 'http://dl.hexchat.net/misc/perl/Perl%205.20.0%20x86.msi';
+		REDIST := 'https://dl.hexchat.net/misc/vcredist_2013_x86.exe';
+		PERL := 'https://dl.hexchat.net/misc/perl/Perl%205.20.0%20x86.msi';
 		PY2 := 'http://python.org/ftp/python/2.7.8/python-2.7.8.msi';
 		PY3 := 'http://python.org/ftp/python/3.4.1/python-3.4.1.msi';
 #endif
-		DOTNET := 'http://dl.hexchat.net/misc/dotnet_40.exe';
-		SPELL := 'http://dl.hexchat.net/hexchat/HexChat%20Spelling%20Dictionaries%20r2.exe';
+		DOTNET := 'https://dl.hexchat.net/misc/dotnet_40.exe';
+		SPELL := 'https://dl.hexchat.net/hexchat/HexChat%20Spelling%20Dictionaries%20r2.exe';
 
 		if not CheckVCInstall() then
 			idpAddFile(REDIST, ExpandConstant('{tmp}\vcredist.exe'));
