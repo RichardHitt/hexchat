@@ -1069,15 +1069,18 @@ gtk_xtext_find_y (GtkXText *xtext, gdouble y, int *subline, int *pixel_offset)
 			break;	
 	}
 	if (ent && ent->vadjval > y)
-		ent = ent->prev;
+		ent = ent->prev;		/* If only one msg, note ent is now NULL */
 	if (ent == NULL)
 		ent = buf->text_last;
 
-	pixoff = y - ent->vadjval;
-	if (ent->vadjsiz - pixoff <= PARA_LEADING)
-		subl = g_slist_length (ent->sublines) - 1;
-	else
-		subl = pixoff / (xtext->fontsize + LINE_LEADING);
+	if (subline || pixel_offset)
+	{
+		pixoff = y - ent->vadjval;
+		if (ent->vadjsiz - pixoff <= PARA_LEADING)
+			subl = g_slist_length (ent->sublines) - 1;
+		else
+			subl = pixoff / (xtext->fontsize + LINE_LEADING);
+	}
 
 ret:
 	if (subline)
@@ -1087,6 +1090,7 @@ ret:
 	return ent;
 }
 
+// RBH Reviewed to here -- Wed Feb 18 8PM
 static textentry *
 gtk_xtext_find_char (GtkXText * xtext, int x, gdouble value, int *off, int *out_of_bounds, int y)
 {
@@ -1207,7 +1211,6 @@ gtk_xtext_paint (GtkWidget *widget, GdkRectangle *area)
 	GtkAdjustment *adj = ADJ;
 	textentry *ent_start, *ent_end;
 	int x, y;
-	gdouble value;
 
 	if (buf == NULL)
 		return;
@@ -1218,7 +1221,7 @@ gtk_xtext_paint (GtkWidget *widget, GdkRectangle *area)
 	if (area->x == 0 && area->y == 0 &&
 		 area->height == widget->allocation.height &&
 		 area->width == widget->allocation.width)
-{
+	{
 		dontscroll (buf);	/* force scrolling off */
 		gtk_xtext_render_page (xtext);
 		return;
@@ -1226,8 +1229,7 @@ gtk_xtext_paint (GtkWidget *widget, GdkRectangle *area)
 
 if (leading)
 {
-	value = adj->value + area->y;
-	ent_start = gtk_xtext_find_char (xtext, area->x, value, NULL, NULL, area->y);
+	ent_start = gtk_xtext_find_y (xtext, adj->value + area->y, NULL, NULL);
 }
 else
 {
@@ -1240,9 +1242,7 @@ else
 	}
 if (leading)
 {
-	value = adj->value + area->y + area->height;
-	ent_end = gtk_xtext_find_char (xtext, area->x + area->width,
-											 value, NULL, NULL, area->y + area->height);
+	ent_end = gtk_xtext_find_y (xtext, adj->value + area->y + area->height, NULL, NULL);
 }
 else
 {
@@ -1291,6 +1291,7 @@ xit:
 		gtk_xtext_draw_sep (xtext, -1);
 }
 
+// RBH Reviewed to here -- Thu Feb 19 8PM
 static gboolean
 gtk_xtext_expose (GtkWidget * widget, GdkEventExpose * event)
 {
