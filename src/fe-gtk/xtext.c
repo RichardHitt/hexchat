@@ -1060,7 +1060,7 @@ gtk_xtext_find_y (GtkXText *xtext, gdouble y, int *subline, int *pixel_offset)
 	textentry *ent = NULL;
 	gdouble pixoff = 0, subl = 0;
 
-	if (buf == NULL)
+	if (buf == NULL || buf->text_first == NULL)
 		goto ret;
 
 	for (ent = buf->text_first; ent; ent = ent->next)
@@ -1071,7 +1071,7 @@ gtk_xtext_find_y (GtkXText *xtext, gdouble y, int *subline, int *pixel_offset)
 	if (ent && ent->vadjval > y)
 		ent = ent->prev;
 	if (ent == NULL)
-		goto ret;
+		ent = buf->text_last;
 
 	pixoff = y - ent->vadjval;
 	if (ent->vadjsiz - pixoff <= PARA_LEADING)
