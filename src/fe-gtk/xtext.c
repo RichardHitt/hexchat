@@ -176,6 +176,21 @@ gtk_xtext_text_width_8bit (GtkXText *xtext, unsigned char *str, int len)
 #endif
 
 #define xtext_draw_bg(xt,x,y,w,h) gdk_draw_rectangle(xt->draw_buf, xt->bgc, 1, x, y, w, h);
+#if 1
+// RBH Debugging code:  To see if text-window anomaly is due to
+//  misbegotten clearing, suppress clearing with gdb by issuing:
+//		set RBHnobg=1
+#undef xtext_draw_bg
+
+int RBHnobg = 0;
+void
+xtext_draw_bg(GtkXText *xt, int x, int y, int w, int h)
+{
+	//printf ("RBH xtext_draw_bg x=%d y=%d w=%d h=%d\n", x, y, w, h);
+	if (RBHnobg) return;
+	gdk_draw_rectangle(xt->draw_buf, xt->bgc, 1, x, y, w, h);
+}
+#endif
 
 /* ======================================= */
 /* ============ PANGO BACKEND ============ */
@@ -1579,18 +1594,16 @@ else
 	{
 		/* a word selection cannot be started if the cursor is out of bounds in gtk_xtext_button_press */
 if (leading)
-		gtk_xtext_get_word (xtext, low_x, low_adj, NULL, &low_offs, &low_len, NULL, low_y);
-else
-		gtk_xtext_get_word (xtext, low_x, low_adj, NULL, &low_offs, &low_len, NULL, low_y);
-
-		/* in case the cursor is out of bounds we keep offset_end from gtk_xtext_find_char and fix the length */
-if (leading)
 {
+		gtk_xtext_get_word (xtext, low_x, low_adj, NULL, &low_offs, &low_len, NULL, low_y);
+		/* in case the cursor is out of bounds we keep offset_end from gtk_xtext_find_char and fix the length */
 		if (gtk_xtext_get_word (xtext, high_x, high_adj, NULL, &high_offs, &high_len, NULL, high_y) == NULL)
 			high_len = high_offs == high_ent->str_len? 0: -1; /* -1 for the space, 0 if at the end */
 }
 else
 {
+		gtk_xtext_get_word (xtext, low_x, low_adj, NULL, &low_offs, &low_len, NULL, low_y);
+		/* in case the cursor is out of bounds we keep offset_end from gtk_xtext_find_char and fix the length */
 		if (gtk_xtext_get_word (xtext, high_x, high_adj, NULL, &high_offs, &high_len, NULL, high_y) == NULL)
 			high_len = high_offs == high_ent->str_len? 0: -1; /* -1 for the space, 0 if at the end */
 }
@@ -1750,7 +1763,6 @@ if (leading)
 		else
 			return 0;
 	}
-	//adj->value = buf->pagetop_adj - delta_adj;
 	xtext->select_end_adjust = adj->value;
 }
 else
@@ -4237,7 +4249,6 @@ else
 	buf->pagetop_ent = ent;
 	buf->pagetop_subline = subline;
 	buf->pagetop_line = startline;
-	buf->pagetop_adj = adj->value;
 
 	if (adj->upper - adj->lower <= adj->page_size)
 		dontscroll (buf);
@@ -4253,7 +4264,7 @@ else
 	overlap = buf->last_pixel_pos - pos;
 	buf->last_pixel_pos = pos;
 	if (RBHdiag)
-		printf ("At line %d, pos=%d overlap=%d last_pixel_pos=%d\n", __LINE__, pos, overlap, buf->last_pixel_pos);
+		printf ("po=%d p=%d o=%d l=%d\n", xtext->pixel_offset, overlap, pos, buf->last_pixel_pos);
 
 #ifndef __APPLE__
 	if (!xtext->pixmap && abs (overlap) < height)
@@ -5680,4 +5691,53 @@ gtk_xtext_buffer_free (xtext_buffer *buf)
 	}
 
 	g_free (buf);
+}
+
+/*
+ * RBH various test functions, to be invoked from gdb usually
+ */
+/* Validate the ent->vadjval and ent->vadjsiz fields */
+void
+RBHvalidate ()
+{
+	GtkXText *xtext = GTK_XTEXT (current_sess->gui->xtext);
+	GtkAdjustment *adj = xtext->newadj;
+	xtext_buffer *buf = xtext->buffer;
+	textentry *ent;
+	gdouble value;
+	int okay = TRUE;
+	int numents = 0;
+	int numlines = 0;
+
+	/* Run the chain of textentries --- */
+	value = adj->lower;
+	for (ent = buf->text_first; ent; ent = ent->next)
+	{
+		numents++;
+		numlines += g_slist_length (ent->sublines);
+		if (ent->vadjval == value)
+		{
+			value += ent->vadjsiz;
+		}
+		else
+		{
+			okay = FALSE;
+			break;
+		}
+	}
+	if (value != adj->upper)
+		okay = FALSE;
+	/* Now 'okay' has the results of the test */
+
+	if (okay)
+	{
+		printf ("Number of textentries is %d, textlines is %d, buf->numlines is %d\n", numents, numlines, buf->num_lines);
+		printf ("adj:  lower=%f value=%f upper=%f step_i=%f page_s=%f page_i=%f\n",
+			adj->lower, adj->value, adj->upper, adj->step_increment, adj->page_size, adj->page_increment);
+		printf ("buf:  old_lower=%f old_value=%f\n", buf->old_lower, buf->old_value);
+		return;
+	}
+	//printf ("Validation failed at ent=%p, str=%s\n", ent, (ent->str? ent->str: "<null string pointer>"));
+	printf ("Validation failed at ent=%p, str=%s\n", ent, ent->str);
+
 }
