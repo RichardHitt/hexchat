@@ -4318,6 +4318,7 @@ if (leading)
 		pix += (xtext->fontsize + LINE_LEADING) * line + PARA_LEADING;
 		subline = 0;
 	}
+	pix -= adj->value;
 	xtext_draw_bg (xtext, 0, pix, width + MARGIN, height - pix);
 }
 else
