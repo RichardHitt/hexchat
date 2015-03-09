@@ -5040,7 +5040,7 @@ if (leading)
 		if (ent)
 		{
 			value = ent->vadjval;
-			if (backward)
+			if (BACKWARD)
 				value -= adj->page_size - ent->vadjsiz;
 		}
 		else
@@ -5059,7 +5059,7 @@ else
 		{
 			value = adj->upper - adj->page_size;
 		}
-		else if ((flags & backward)  && ent)
+		else if (BACKWARD && ent)
 		{
 			value -= adj->page_size - g_slist_length (ent->sublines);
 			if (value < 0)
