@@ -4007,7 +4007,7 @@ gtk_xtext_lines_taken (xtext_buffer *buf, textentry * ent)
 	retval =  g_slist_length (ent->sublines);
 ret:
 	/* Let PARA_LEADING be in addition to LINE_LEADING for the last or only line */
-	ent->vadjval = ent->prev? (ent->prev->vadjval + ent->prev->vadjsiz): adj->lower;
+	ent->vadjval = ent->prev? (ent->prev->vadjval + ent->prev->vadjsiz): buf->old_lower;
 	ent->vadjsiz = retval * (xtext->fontsize + LINE_LEADING) + PARA_LEADING;
 	if (!onceonly)
 	{
