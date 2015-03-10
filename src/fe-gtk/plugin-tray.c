@@ -487,26 +487,32 @@ tray_menu_destroy (GtkWidget *menu, gpointer userdata)
 }
 
 #ifdef WIN32
-static void
+static gboolean
 tray_menu_enter_cb (GtkWidget *menu)
 {
 	tray_menu_inactivetime = 0;
+	return FALSE;
 }
 
-static void
+static gboolean
 tray_menu_left_cb (GtkWidget *menu)
 {
 	tray_menu_inactivetime = g_get_real_time ();
+	return FALSE;
 }
 
-static void
+static gboolean
 tray_check_hide (GtkWidget *menu)
 {
 	if (tray_menu_inactivetime && g_get_real_time () - tray_menu_inactivetime  >= 2000000)
 	{
 		tray_menu_destroy (menu, NULL);
+		return G_SOURCE_REMOVE;
 	}
+
+	return G_SOURCE_CONTINUE;
 }
+#endif
 
 static void
 tray_menu_settings (GtkWidget * wid, gpointer none)
@@ -514,7 +520,6 @@ tray_menu_settings (GtkWidget * wid, gpointer none)
 	extern void setup_open (void);
 	setup_open ();
 }
-#endif
 
 static void
 tray_menu_cb (GtkWidget *widget, guint button, guint time, gpointer userdata)
@@ -563,10 +568,9 @@ tray_menu_cb (GtkWidget *widget, guint button, guint time, gpointer userdata)
 		gtk_widget_set_sensitive (item, FALSE);
 
 	menu_add_plugin_items (menu, "\x5$TRAY", NULL);
-#ifdef WIN32
+
 	tray_make_item (menu, NULL, tray_menu_quit_cb, NULL);
 	mg_create_icon_item (_("_Preferences"), GTK_STOCK_PREFERENCES, menu, tray_menu_settings, NULL);
-#endif
 	tray_make_item (menu, NULL, tray_menu_quit_cb, NULL);
 	mg_create_icon_item (_("_Quit"), GTK_STOCK_QUIT, menu, tray_menu_quit_cb, NULL);
 
@@ -581,7 +585,7 @@ tray_menu_cb (GtkWidget *widget, guint button, guint time, gpointer userdata)
 	g_signal_connect (G_OBJECT (menu), "enter-notify-event",
 							G_CALLBACK (tray_menu_enter_cb), NULL);
 
-	tray_menu_timer = g_timeout_add(500, (GSourceFunc) tray_check_hide, menu);
+	tray_menu_timer = g_timeout_add (500, tray_check_hide, menu);
 #endif
 
 	gtk_menu_popup (GTK_MENU (menu), NULL, NULL, NULL,
