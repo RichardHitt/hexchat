@@ -176,7 +176,7 @@ scrollback_shrink (session *sess)
 		p++;
 	}
 
-	fh = g_open (file, O_CREAT | O_TRUNC | O_APPEND | O_WRONLY, 0644);
+	fh = g_open (file, O_CREAT | O_TRUNC | O_APPEND | O_WRONLY | OFLAGS, 0644);
 	g_free (file);
 	if (fh == -1)
 	{
@@ -207,10 +207,9 @@ scrollback_shrink (session *sess)
 }
 
 static void
-scrollback_save (session *sess, char *text)
+scrollback_save (session *sess, char *text, time_t stamp)
 {
 	char *buf;
-	time_t stamp;
 	int len;
 
 	if (sess->type == SESS_SERVER && prefs.hex_gui_tab_server == 1)
@@ -232,13 +231,14 @@ scrollback_save (session *sess, char *text)
 		if ((buf = scrollback_get_filename (sess)) == NULL)
 			return;
 
-		sess->scrollfd = g_open (buf, O_CREAT | O_APPEND | O_WRONLY, 0644);
+		sess->scrollfd = g_open (buf, O_CREAT | O_APPEND | O_WRONLY | OFLAGS, 0644);
 		g_free (buf);
 		if (sess->scrollfd == -1)
 			return;
 	}
 
-	stamp = time (0);
+	if (!stamp)
+		stamp = time(0);
 	if (sizeof (stamp) == 4)	/* gcc will optimize one of these out */
 		buf = g_strdup_printf ("T %d ", (int) stamp);
 	else
@@ -300,13 +300,6 @@ scrollback_load (session *sess)
 		if (io_status == G_IO_STATUS_NORMAL)
 		{
 			char *buf_tmp;
-
-			/* If nothing but funny trailing matter e.g. 0x0d or 0x0d0a, toss it */
-			if (n_bytes >= 1 && buf[0] == 0x0d)
-			{
-				g_free (buf);
-				continue;
-			}
 
 			n_bytes--;
 			buf_tmp = buf;
@@ -508,34 +501,6 @@ log_insert_vars (char *buf, int bufsize, char *fmt, char *c, char *n, char *s)
 	}
 }
 
-static int
-logmask_is_fullpath ()
-{
-	/* Check if final path/filename is absolute or relative.
-	 * If one uses log mask variables, such as "%c/...", %c will be empty upon
-	 * connecting since there's no channel name yet, so we have to make sure
-	 * we won't try to write to the FS root. On Windows we can be sure it's
-	 * full path if the 2nd character is a colon since Windows doesn't allow
-	 * colons in filenames.
-	 */
-#ifdef WIN32
-	/* Treat it as full path if it
-	 * - starts with '\' which denotes the root directory of the current drive letter
-	 * - starts with a drive letter and followed by ':'
-	 */
-	if (prefs.hex_irc_logmask[0] == '\\' || (((prefs.hex_irc_logmask[0] >= 'A' && prefs.hex_irc_logmask[0] <= 'Z') || (prefs.hex_irc_logmask[0] >= 'a' && prefs.hex_irc_logmask[0] <= 'z')) && prefs.hex_irc_logmask[1] == ':'))
-#else
-	if (prefs.hex_irc_logmask[0] == '/')
-#endif
-	{
-		return 1;
-	}
-	else
-	{
-		return 0;
-	}
-}
-
 static char *
 log_create_pathname (char *servname, char *channame, char *netname)
 {
@@ -570,8 +535,10 @@ log_create_pathname (char *servname, char *channame, char *netname)
 	now = time (NULL);
 	strftime_utf8 (fnametime, sizeof (fnametime), fname, now);
 
-	/* create final path/filename */
-	if (logmask_is_fullpath ())
+	/* If one uses log mask variables, such as "%c/...", %c will be empty upon
+	 * connecting since there's no channel name yet, so we have to make sure
+	 * we won't try to write to the FS root. */
+	if (g_path_is_absolute (prefs.hex_irc_logmask))
 	{
 		g_snprintf (fname, sizeof (fname), "%s", fnametime);
 	}
@@ -598,11 +565,7 @@ log_open_file (char *servname, char *channame, char *netname)
 	if (!file)
 		return -1;
 
-#ifdef WIN32
-	fd = g_open (file, O_CREAT | O_APPEND | O_WRONLY, S_IREAD|S_IWRITE);
-#else
-	fd = g_open (file, O_CREAT | O_APPEND | O_WRONLY, 0644);
-#endif
+	fd = g_open (file, O_CREAT | O_APPEND | O_WRONLY | OFLAGS, 0644);
 	g_free (file);
 
 	if (fd == -1)
@@ -868,7 +831,7 @@ PrintTextTimeStamp (session *sess, char *text, time_t timestamp)
 	}
 
 	log_write (sess, text, timestamp);
-	scrollback_save (sess, text);
+	scrollback_save (sess, text, timestamp);
 	fe_print_text (sess, text, timestamp, FALSE);
 	g_free (text);
 }
@@ -2197,12 +2160,8 @@ sound_play (const char *file, gboolean quiet)
 		return;
 	}
 
-#ifdef WIN32
 	/* check for fullpath */
-	if (file[0] == '\\' || (((file[0] >= 'A' && file[0] <= 'Z') || (file[0] >= 'a' && file[0] <= 'z')) && file[1] == ':'))
-#else
-	if (file[0] == '/')
-#endif
+	if (g_path_is_absolute (file))
 	{
 		wavfile = g_strdup (file);
 	}
