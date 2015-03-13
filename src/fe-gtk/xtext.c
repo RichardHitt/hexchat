@@ -2566,17 +2566,22 @@ gtk_xtext_scroll (GtkWidget *widget, GdkEventScroll *event)
 	GtkXText *xtext = GTK_XTEXT (widget);
 	GtkAdjustment *adj = ADJ;
 	gfloat new_value;
+	int inc;
+
+	inc = adj->page_increment / 10;
+	if (inc == 0)
+		inc = 1;
 
 	if (event->direction == GDK_SCROLL_UP)		/* mouse wheel pageUp */
 	{
-		new_value = adj->value - (adj->page_increment / 10);
+		new_value = adj->value - inc;
 		if (new_value < adj->lower)
 			new_value = adj->lower;
 		gtk_adjustment_set_value (adj, new_value);
 	}
 	else if (event->direction == GDK_SCROLL_DOWN)	/* mouse wheel pageDn */
 	{
-		new_value = adj->value + (adj->page_increment / 10);
+		new_value = adj->value + inc;
 		if (new_value > (adj->upper - adj->page_size))
 			new_value = adj->upper - adj->page_size;
 		gtk_adjustment_set_value (adj, new_value);
