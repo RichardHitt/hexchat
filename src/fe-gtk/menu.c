@@ -609,11 +609,20 @@ menu_create_nickinfo_menu (struct User *user, GtkWidget *submenu)
 	struct away_msg *away;
 	gboolean missing = FALSE;
 	GtkWidget *item;
+	extern time_t xtext_but3time;
 
 	/* let the translators tweak this if need be */
 	fmt = _("<tt><b>%-11s</b></tt> %s");
 	g_snprintf (unknown, sizeof (unknown), "<i>%s</i>", _("Unknown"));
 
+	if (xtext_but3time != 0)
+	{
+		char *stampstr;
+
+		xtext_get_stamp_str (xtext_but3time, &stampstr);
+		item = menu_quick_item (0, stampstr, submenu, XCMENU_MARKUP, 0, 0);
+		g_free (stampstr);
+	}
 	if (user->realname)
 	{
 		real = strip_color (user->realname, -1, STRIP_ALL|STRIP_ESCMARKUP);

@@ -1980,6 +1980,8 @@ gtk_xtext_button_release (GtkWidget * widget, GdkEventButton * event)
 	return FALSE;
 }
 
+time_t xtext_but3time = 0;
+
 static gboolean
 gtk_xtext_button_press (GtkWidget * widget, GdkEventButton * event)
 {
@@ -1991,11 +1993,15 @@ gtk_xtext_button_press (GtkWidget * widget, GdkEventButton * event)
 
 	gdk_window_get_pointer (widget->window, &x, &y, &mask);
 
+	xtext_but3time = 0;
 	if (event->button == 3 || event->button == 2) /* right/middle click */
 	{
-		word = gtk_xtext_get_word (xtext, x, y, 0, 0, 0, 0);
+		ent = NULL;
+		word = gtk_xtext_get_word (xtext, x, y, &ent, 0, 0, 0);
 		if (word)
 		{
+			if (ent)
+				xtext_but3time = ent->stamp;
 			g_signal_emit (G_OBJECT (xtext), xtext_signals[WORD_CLICK], 0,
 								word, event);
 		} else
